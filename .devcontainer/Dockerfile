@@ -1,21 +1,17 @@
-FROM golang:1.24
+FROM mcr.microsoft.com/devcontainers/go:1.24
 
-RUN apt-get update && \
-    apt-get install -y zsh tree && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN useradd -m vscode
+# This is important to change the user to clone/copy/etc. in good folder
 USER vscode
-WORKDIR /workspace
+WORKDIR /home/vscode
 
-ENV PATH=$PATH:/usr/local/go/bin:/go/bin
+# Install Oh My Zsh : https://github.com/ohmyzsh/ohmyzsh?tab=readme-ov-file#basic-installation
+# We need to use '|| true' to avoid the script to stop the execution if the installation is already done
+RUN sh -c "$(wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -O -)" || true
 
-RUN go install github.com/go-delve/delve/cmd/dlv@latest
-RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.0.2
-
-RUN sh -c "$(wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -O -)" && \
-    git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
+# Download and install ZSH plugins
+RUN git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions && \
     git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting && \
     git clone https://github.com/MichaelAquilina/zsh-you-should-use.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/you-should-use
 
-COPY --chown=vscode:vscode .zshrc /home/vscode/.zshrc
+# Copy .devcontainer/zshrc config to apply plugins/themes/etc.
+COPY --chown=vscode:vscode .zshrc .zshrc
