@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"net/url"
 	"strings"
 
@@ -20,34 +19,18 @@ func main() {
 		tls_client.NewNoopLogger(),
 		tls_client.WithCookieJar(tls_client.NewCookieJar()),
 		tls_client.WithNotFollowRedirects(),
-		// tls_client.WithCharlesProxy("127.0.0.1", "8888"), // TODO : do not commit this
 	)
 
-	// 1. Get with query parameters
-	sendGetRequest(client, handler, URL+"/get?name=pierre&role=developer")
-	fmt.Println("✅ Parameters sent")
-
-	// 2. Set cookies
-	sendGetRequest(client, handler, URL+"/cookies/set?name=pierre&role=developer")
-	fmt.Println("✅ Cookies set")
-
-	// 3. Form URL-encoded
-	form := url.Values{}
-	form.Set("name", "Pierre")
-	form.Set("role", "developer")
-	sendPostRequest(client, handler, URL+"/post", "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
-	fmt.Println("✅ Form URL-encoded request sent")
-
-	// 4. JSON
-	jsonBody := `{"name":"Pierre","role":"developer"}`
-	sendPostRequest(client, handler, URL+"/post", "application/json", strings.NewReader(jsonBody))
-	fmt.Println("✅ JSON request sent")
+	sendGetRequestWithQueryParams(handler, client)
+	sendGetRequestWithSetCookies(handler, client)
+	sendPostRequestWithForm(handler, client)
+	sendPostRequestWithJSON(handler, client)
 
 	handler.Save("example.har")
 }
 
-func sendGetRequest(c tls_client.HttpClient, h *harhandler.HARHandler, URL string) {
-	req, _ := http.NewRequest(http.MethodGet, URL, nil)
+func sendGetRequestWithQueryParams(handler *harhandler.HARHandler, client tls_client.HttpClient) {
+	req, _ := http.NewRequest(http.MethodGet, URL+"/get?name=pierre&role=developer", nil)
 	req.Header.Add("Accept", "*/*")
 	req.Header.Add("Host", "httpbin.org")
 	req.Header.Add("User-Agent", "harkit-example")
@@ -59,21 +42,52 @@ func sendGetRequest(c tls_client.HttpClient, h *harhandler.HARHandler, URL strin
 	req.Header.Add(http.HeaderOrderKey, "accept-encoding")
 
 	entry := harhandler.NewEntry()
-	resp, err := c.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		panic(err)
 	}
 	defer resp.Body.Close()
-	urlParsed, _ := url.Parse(URL)
-	_ = entry.AddEntry(req, resp, c.GetCookies(urlParsed))
+	_ = entry.AddEntry(req, resp)
 
-	h.AddEntry(entry)
+	handler.AddEntry(entry)
+
+	fmt.Println("Parameters sent.")
 }
 
-func sendPostRequest(c tls_client.HttpClient, h *harhandler.HARHandler, URL string, contentType string, body io.Reader) {
-	req, _ := http.NewRequest(http.MethodPost, URL, body)
+func sendGetRequestWithSetCookies(handler *harhandler.HARHandler, client tls_client.HttpClient) {
+	req, _ := http.NewRequest(http.MethodGet, URL+"/cookies/set?name=pierre&role=developer", nil)
 	req.Header.Add("Accept", "*/*")
-	req.Header.Add("Content-Type", contentType)
+	req.Header.Add("Host", "httpbin.org")
+	req.Header.Add("User-Agent", "harkit-example")
+	req.Header.Add("Accept-Encoding", "gzip, deflate, br")
+
+	req.Header.Add(http.HeaderOrderKey, "accept")
+	req.Header.Add(http.HeaderOrderKey, "host")
+	req.Header.Add(http.HeaderOrderKey, "user-agent")
+	req.Header.Add(http.HeaderOrderKey, "accept-encoding")
+
+	entry := harhandler.NewEntry()
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	_ = entry.AddEntry(req, resp)
+
+	handler.AddEntry(entry)
+
+	fmt.Println("Cookies set.")
+}
+
+func sendPostRequestWithForm(handler *harhandler.HARHandler, client tls_client.HttpClient) {
+	form := url.Values{}
+	form.Set("name", "Pierre")
+	form.Set("role", "developer")
+	body := strings.NewReader(form.Encode())
+
+	req, _ := http.NewRequest(http.MethodPost, URL+"/post", body)
+	req.Header.Add("Accept", "*/*")
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("Host", "httpbin.org")
 	req.Header.Add("User-Agent", "harkit-example")
 	req.Header.Add("Accept-Encoding", "gzip, deflate, br")
@@ -89,13 +103,48 @@ func sendPostRequest(c tls_client.HttpClient, h *harhandler.HARHandler, URL stri
 	req.Header.Add(http.HeaderOrderKey, "accept-encoding")
 
 	entry := harhandler.NewEntry()
-	resp, err := c.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		panic(err)
 	}
 	defer resp.Body.Close()
-	urlParsed, _ := url.Parse(URL)
-	_ = entry.AddEntry(req, resp, c.GetCookies(urlParsed))
+	_ = entry.AddEntry(req, resp)
 
-	h.AddEntry(entry)
+	handler.AddEntry(entry)
+
+	fmt.Println("Form URL-encoded request sent.")
+}
+
+func sendPostRequestWithJSON(handler *harhandler.HARHandler, client tls_client.HttpClient) {
+	jsonBody := `{"name":"Pierre","role":"developer"}`
+	body := strings.NewReader(jsonBody)
+
+	req, _ := http.NewRequest(http.MethodPost, URL+"/post", body)
+	req.Header.Add("Accept", "*/*")
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Host", "httpbin.org")
+	req.Header.Add("User-Agent", "harkit-example")
+	req.Header.Add("Accept-Encoding", "gzip, deflate, br")
+
+	req.AddCookie(&http.Cookie{Name: "example", Value: "cookie"})
+
+	req.Header.Add(http.HeaderOrderKey, "accept")
+	req.Header.Add(http.HeaderOrderKey, "content-length")
+	req.Header.Add(http.HeaderOrderKey, "content-type")
+	req.Header.Add(http.HeaderOrderKey, "cookie")
+	req.Header.Add(http.HeaderOrderKey, "host")
+	req.Header.Add(http.HeaderOrderKey, "user-agent")
+	req.Header.Add(http.HeaderOrderKey, "accept-encoding")
+
+	entry := harhandler.NewEntry()
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	_ = entry.AddEntry(req, resp)
+
+	handler.AddEntry(entry)
+
+	fmt.Println("JSON request sent.")
 }

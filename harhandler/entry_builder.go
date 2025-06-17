@@ -40,20 +40,15 @@ func NewEntry() *EntryBuilder {
 	}
 }
 
-// AddEntry populates the HAR entry with the given HTTP request and response, as well as any
-// additional cookies. It clones and restores the request body to prevent side effects.
+// AddEntry populates the HAR entry with the given HTTP request and response.
+// It clones and restores the request body to prevent side effects.
 // This method should be called after the HTTP request is executed to avoid blocking.
-func (b *EntryBuilder) AddEntry(
-	req *http.Request, resp *http.Response, additionalCookies []*http.Cookie,
-) error {
+func (b *EntryBuilder) AddEntry(req *http.Request, resp *http.Response) error {
 	b.entry.Timings.Receive = float64(time.Since(b.entry.StartedDateTime).Milliseconds())
 
 	clonedReq, err := cloneRequestPreserveBody(req)
 	if err != nil {
 		return err
-	}
-	for _, c := range additionalCookies {
-		clonedReq.AddCookie(c)
 	}
 
 	harReq, err := converter.FromHTTPRequest(clonedReq)

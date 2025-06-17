@@ -3,7 +3,7 @@
 A Golang library for parsing and managing HAR (HTTP Archive) files. Provides easy-to-use structs and functions for loading, inspecting, and manipulating HAR files, making HTTP traffic analysis and debugging simpler.
 
 - [X] Check for case sensitivity in HeaderOrder keys
-- [ ] Add Remote Add Address (proxy used)
+- [ ] Add Remote Address (proxy used)
 - [ ] Fix bodySize
 
 ## How to compile
@@ -12,5 +12,5 @@ A Golang library for parsing and managing HAR (HTTP Archive) files. Provides eas
 
 ```bash
 cd example
-GOOS=darwin GOARCH=amd64 go build example/main.go
+GOOS=darwin GOARCH=arm64 go build -o example-harkit main.go
 ```
