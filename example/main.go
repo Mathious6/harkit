@@ -2,25 +2,41 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/Mathious6/harkit/harhandler"
 	http "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
 )
 
-const URL = "https://httpbin.org"
+const (
+	URL        = "https://httpbin.org"
+	PROXY_HOST = "host.docker.internal"
+	PROXY_PORT = "8888"
+)
 
 func main() {
 	handler := harhandler.NewHandler()
 
-	client, _ := tls_client.NewHttpClient(
-		tls_client.NewNoopLogger(),
+	opts := []tls_client.HttpClientOption{
 		tls_client.WithCookieJar(tls_client.NewCookieJar()),
 		tls_client.WithNotFollowRedirects(),
-		tls_client.WithCharlesProxy("host.docker.internal", "8888"),
-	)
+	}
+
+	if isProxyRunning(net.JoinHostPort(PROXY_HOST, PROXY_PORT), 100*time.Millisecond) {
+		opts = append(opts, tls_client.WithCharlesProxy(PROXY_HOST, PROXY_PORT))
+		fmt.Println("Using Charles proxy.")
+	} else {
+		fmt.Println("Charles proxy not running, using direct connection.")
+	}
+
+	client, err := tls_client.NewHttpClient(tls_client.NewNoopLogger(), opts...)
+	if err != nil {
+		panic(err)
+	}
 
 	sendGetRequestWithQueryParams(handler, client)
 	sendGetRequestWithSetCookies(handler, client)
@@ -148,4 +164,14 @@ func sendPostRequestWithJSON(handler *harhandler.HARHandler, client tls_client.H
 	handler.AddEntry(entry)
 
 	fmt.Println("JSON request sent.")
+}
+
+// isProxyRunning checks if a proxy is running on the given address and port.
+func isProxyRunning(address string, timeout time.Duration) bool {
+	conn, err := net.DialTimeout("tcp", address, timeout)
+	if err != nil {
+		return false
+	}
+	defer conn.Close()
+	return true
 }
