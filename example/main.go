@@ -19,6 +19,7 @@ func main() {
 		tls_client.NewNoopLogger(),
 		tls_client.WithCookieJar(tls_client.NewCookieJar()),
 		tls_client.WithNotFollowRedirects(),
+		tls_client.WithCharlesProxy("host.docker.internal", "8888"),
 	)
 
 	sendGetRequestWithQueryParams(handler, client)
