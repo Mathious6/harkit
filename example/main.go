@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/Mathious6/harkit/harhandler"
+	"github.com/Mathious6/httpkit"
 	http "github.com/bogdanfinn/fhttp"
-	tls_client "github.com/bogdanfinn/tls-client"
 )
 
 const (
@@ -21,32 +21,32 @@ const (
 func main() {
 	handler := harhandler.NewHandler()
 
-	opts := []tls_client.HttpClientOption{
-		tls_client.WithCookieJar(tls_client.NewCookieJar()),
-		tls_client.WithNotFollowRedirects(),
+	opts := []httpkit.HttpClientOption{
+		httpkit.WithCookieJar(httpkit.NewCookieJar()),
+		httpkit.WithNotFollowRedirects(),
 	}
 
 	if isProxyRunning(net.JoinHostPort(PROXY_HOST, PROXY_PORT), 100*time.Millisecond) {
-		opts = append(opts, tls_client.WithCharlesProxy(PROXY_HOST, PROXY_PORT))
+		opts = append(opts, httpkit.WithCharlesProxy(PROXY_HOST, PROXY_PORT))
 		fmt.Println("Using Charles proxy.")
 	} else {
 		fmt.Println("Charles proxy not running, using direct connection.")
 	}
 
-	client, err := tls_client.NewHttpClient(tls_client.NewNoopLogger(), opts...)
+	client, err := httpkit.NewHttpClient(httpkit.NewNoopLogger(), opts...)
 	if err != nil {
 		panic(err)
 	}
 
 	sendGetRequestWithQueryParams(handler, client)
-	sendGetRequestWithSetCookies(handler, client)
-	sendPostRequestWithForm(handler, client)
-	sendPostRequestWithJSON(handler, client)
+	// sendGetRequestWithSetCookies(handler, client)
+	// sendPostRequestWithForm(handler, client)
+	// sendPostRequestWithJSON(handler, client)
 
 	handler.Save("example.har")
 }
 
-func sendGetRequestWithQueryParams(handler *harhandler.HARHandler, client tls_client.HttpClient) {
+func sendGetRequestWithQueryParams(handler *harhandler.HARHandler, client httpkit.HttpClient) {
 	req, _ := http.NewRequest(http.MethodGet, URL+"/get?name=pierre&role=developer", nil)
 	req.Header.Add("Accept", "*/*")
 	req.Header.Add("Host", "httpbin.org")
@@ -71,7 +71,7 @@ func sendGetRequestWithQueryParams(handler *harhandler.HARHandler, client tls_cl
 	fmt.Println("Parameters sent.")
 }
 
-func sendGetRequestWithSetCookies(handler *harhandler.HARHandler, client tls_client.HttpClient) {
+func sendGetRequestWithSetCookies(handler *harhandler.HARHandler, client httpkit.HttpClient) {
 	req, _ := http.NewRequest(http.MethodGet, URL+"/cookies/set?name=pierre&role=developer", nil)
 	req.Header.Add("Accept", "*/*")
 	req.Header.Add("Host", "httpbin.org")
@@ -96,7 +96,7 @@ func sendGetRequestWithSetCookies(handler *harhandler.HARHandler, client tls_cli
 	fmt.Println("Cookies set.")
 }
 
-func sendPostRequestWithForm(handler *harhandler.HARHandler, client tls_client.HttpClient) {
+func sendPostRequestWithForm(handler *harhandler.HARHandler, client httpkit.HttpClient) {
 	form := url.Values{}
 	form.Set("name", "Pierre")
 	form.Set("role", "developer")
@@ -132,7 +132,7 @@ func sendPostRequestWithForm(handler *harhandler.HARHandler, client tls_client.H
 	fmt.Println("Form URL-encoded request sent.")
 }
 
-func sendPostRequestWithJSON(handler *harhandler.HARHandler, client tls_client.HttpClient) {
+func sendPostRequestWithJSON(handler *harhandler.HARHandler, client httpkit.HttpClient) {
 	jsonBody := `{"name":"Pierre","role":"developer"}`
 	body := strings.NewReader(jsonBody)
 
