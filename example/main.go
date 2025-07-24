@@ -19,8 +19,6 @@ const (
 )
 
 func main() {
-	handler := harhandler.NewHandler()
-
 	opts := []httpkit.HttpClientOption{
 		httpkit.WithCookieJar(httpkit.NewCookieJar()),
 		httpkit.WithNotFollowRedirects(),
@@ -38,15 +36,15 @@ func main() {
 		panic(err)
 	}
 
-	sendGetRequestWithQueryParams(handler, client)
-	// sendGetRequestWithSetCookies(handler, client)
-	// sendPostRequestWithForm(handler, client)
-	// sendPostRequestWithJSON(handler, client)
+	sendGetRequestWithQueryParams(client)
+	sendGetRequestWithSetCookies(client)
+	sendPostRequestWithForm(client)
+	sendPostRequestWithJSON(client)
 
-	handler.Save("example.har")
+	harhandler.Export(client.GetFlowId(), "example.har")
 }
 
-func sendGetRequestWithQueryParams(handler *harhandler.HARHandler, client httpkit.HttpClient) {
+func sendGetRequestWithQueryParams(client httpkit.HttpClient) {
 	req, _ := http.NewRequest(http.MethodGet, URL+"/get?name=pierre&role=developer", nil)
 	req.Header.Add("Accept", "*/*")
 	req.Header.Add("Host", "httpbin.org")
@@ -58,20 +56,18 @@ func sendGetRequestWithQueryParams(handler *harhandler.HARHandler, client httpki
 	req.Header.Add(http.HeaderOrderKey, "user-agent")
 	req.Header.Add(http.HeaderOrderKey, "accept-encoding")
 
-	entry := harhandler.NewEntry()
+	sentAt := time.Now()
 	resp, err := client.Do(req)
 	if err != nil {
 		panic(err)
 	}
 	defer resp.Body.Close()
-	_ = entry.AddEntry(req, resp)
-
-	handler.AddEntry(entry)
+	harhandler.NewHandler(client.GetFlowId()).Build(sentAt, req, resp)
 
 	fmt.Println("Parameters sent.")
 }
 
-func sendGetRequestWithSetCookies(handler *harhandler.HARHandler, client httpkit.HttpClient) {
+func sendGetRequestWithSetCookies(client httpkit.HttpClient) {
 	req, _ := http.NewRequest(http.MethodGet, URL+"/cookies/set?name=pierre&role=developer", nil)
 	req.Header.Add("Accept", "*/*")
 	req.Header.Add("Host", "httpbin.org")
@@ -83,20 +79,18 @@ func sendGetRequestWithSetCookies(handler *harhandler.HARHandler, client httpkit
 	req.Header.Add(http.HeaderOrderKey, "user-agent")
 	req.Header.Add(http.HeaderOrderKey, "accept-encoding")
 
-	entry := harhandler.NewEntry()
+	sentAt := time.Now()
 	resp, err := client.Do(req)
 	if err != nil {
 		panic(err)
 	}
 	defer resp.Body.Close()
-	_ = entry.AddEntry(req, resp)
-
-	handler.AddEntry(entry)
+	harhandler.NewHandler(client.GetFlowId()).Build(sentAt, req, resp)
 
 	fmt.Println("Cookies set.")
 }
 
-func sendPostRequestWithForm(handler *harhandler.HARHandler, client httpkit.HttpClient) {
+func sendPostRequestWithForm(client httpkit.HttpClient) {
 	form := url.Values{}
 	form.Set("name", "Pierre")
 	form.Set("role", "developer")
@@ -119,20 +113,18 @@ func sendPostRequestWithForm(handler *harhandler.HARHandler, client httpkit.Http
 	req.Header.Add(http.HeaderOrderKey, "user-agent")
 	req.Header.Add(http.HeaderOrderKey, "accept-encoding")
 
-	entry := harhandler.NewEntry()
+	sentAt := time.Now()
 	resp, err := client.Do(req)
 	if err != nil {
 		panic(err)
 	}
 	defer resp.Body.Close()
-	_ = entry.AddEntry(req, resp)
-
-	handler.AddEntry(entry)
+	harhandler.NewHandler(client.GetFlowId()).Build(sentAt, req, resp)
 
 	fmt.Println("Form URL-encoded request sent.")
 }
 
-func sendPostRequestWithJSON(handler *harhandler.HARHandler, client httpkit.HttpClient) {
+func sendPostRequestWithJSON(client httpkit.HttpClient) {
 	jsonBody := `{"name":"Pierre","role":"developer"}`
 	body := strings.NewReader(jsonBody)
 
@@ -153,15 +145,13 @@ func sendPostRequestWithJSON(handler *harhandler.HARHandler, client httpkit.Http
 	req.Header.Add(http.HeaderOrderKey, "user-agent")
 	req.Header.Add(http.HeaderOrderKey, "accept-encoding")
 
-	entry := harhandler.NewEntry()
+	sentAt := time.Now()
 	resp, err := client.Do(req)
 	if err != nil {
 		panic(err)
 	}
 	defer resp.Body.Close()
-	_ = entry.AddEntry(req, resp)
-
-	handler.AddEntry(entry)
+	harhandler.NewHandler(client.GetFlowId()).Build(sentAt, req, resp)
 
 	fmt.Println("JSON request sent.")
 }
