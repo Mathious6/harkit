@@ -19,30 +19,30 @@ const (
 
 func convertCookies(cookies []*http.Cookie) []*harfile.Cookie {
 	harCookies := make([]*harfile.Cookie, len(cookies))
-
-	for i, cookie := range cookies {
-		var expires string
-		if !cookie.Expires.IsZero() {
-			expires = cookie.Expires.Format(time.RFC3339Nano)
-		}
-
-		harCookies[i] = &harfile.Cookie{
+	for index, cookie := range cookies {
+		harCookies[index] = &harfile.Cookie{
 			Name:     cookie.Name,
 			Value:    cookie.Value,
 			Path:     cookie.Path,
 			Domain:   cookie.Domain,
-			Expires:  expires,
+			Expires:  formatExpires(cookie.Expires),
 			HTTPOnly: cookie.HttpOnly,
 			Secure:   cookie.Secure,
 		}
 	}
-
 	return harCookies
 }
 
+func formatExpires(expires time.Time) string {
+	if expires.IsZero() {
+		return ""
+	}
+	return expires.Format(time.RFC3339Nano)
+}
+
 func convertHeaders(header http.Header, contentLength int64) []*harfile.NVPair {
-	// By default, client adds Content-Length header later on, so we need to add it here
-	// We clone the header to avoid modifying the original one to avoid side effects
+	// By default, client adds Content-Length header later on, so we need to add it here.
+	// We clone the header to avoid modifying the original one to avoid side effects.
 	clonedHeader := header.Clone()
 	if contentLength > 0 && clonedHeader.Get(ContentLengthKey) == "" {
 		clonedHeader.Set(ContentLengthKey, fmt.Sprintf("%d", contentLength))

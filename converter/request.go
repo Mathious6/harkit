@@ -11,6 +11,12 @@ import (
 	http "github.com/bogdanfinn/fhttp"
 )
 
+const (
+	applicationXWWWFormURLEncoded = "application/x-www-form-urlencoded"
+	multipartFormData             = "multipart/form-data"
+	maxMultipartFormDataSize      = 32 << 20 // 32 MB limit
+)
+
 func FromHTTPRequest(req *http.Request) (*harfile.Request, error) {
 	if req == nil {
 		return nil, errors.New("request cannot be nil")
@@ -18,7 +24,7 @@ func FromHTTPRequest(req *http.Request) (*harfile.Request, error) {
 
 	headers := convertHeaders(req.Header, req.ContentLength)
 
-	postData, err := extractPostData(req)
+	postData, err := extractRequestPostData(req)
 	if err != nil {
 		return nil, err
 	}
@@ -29,14 +35,14 @@ func FromHTTPRequest(req *http.Request) (*harfile.Request, error) {
 		HTTPVersion: req.Proto,
 		Cookies:     convertCookies(req.Cookies()),
 		Headers:     headers,
-		QueryString: convertQueryParams(req.URL),
+		QueryString: convertRequestQueryParams(req.URL),
 		PostData:    postData,
 		HeadersSize: computeRequestHeadersSize(req, headers),
 		BodySize:    req.ContentLength,
 	}, nil
 }
 
-func convertQueryParams(u *url.URL) []*harfile.NVPair {
+func convertRequestQueryParams(u *url.URL) []*harfile.NVPair {
 	result := make([]*harfile.NVPair, 0)
 
 	for key, values := range u.Query() {
@@ -48,7 +54,7 @@ func convertQueryParams(u *url.URL) []*harfile.NVPair {
 	return result
 }
 
-func extractPostData(req *http.Request) (*harfile.PostData, error) {
+func extractRequestPostData(req *http.Request) (*harfile.PostData, error) {
 	if req.Body == nil || req.ContentLength == 0 {
 		return nil, nil
 	}
@@ -63,7 +69,7 @@ func extractPostData(req *http.Request) (*harfile.PostData, error) {
 	mimeType := req.Header.Get(ContentTypeKey)
 	postData := &harfile.PostData{MimeType: mimeType}
 
-	if strings.HasPrefix(mimeType, "application/x-www-form-urlencoded") {
+	if strings.HasPrefix(mimeType, applicationXWWWFormURLEncoded) {
 		text := string(buf)
 		pairs := strings.SplitSeq(text, "&")
 
@@ -78,8 +84,8 @@ func extractPostData(req *http.Request) (*harfile.PostData, error) {
 		return postData, nil
 	}
 
-	if strings.HasPrefix(mimeType, "multipart/form-data") {
-		err := req.ParseMultipartForm(32 << 20) // 32 MB limit
+	if strings.HasPrefix(mimeType, multipartFormData) {
+		err := req.ParseMultipartForm(maxMultipartFormDataSize)
 		if err != nil {
 			return nil, err
 		}

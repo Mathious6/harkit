@@ -14,7 +14,7 @@ func FromHTTPResponse(resp *http.Response) (*harfile.Response, error) {
 		return nil, errors.New("response cannot be nil")
 	}
 
-	content, err := buildContent(resp)
+	content, err := buildResponseContent(resp)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func locateRedirectURL(resp *http.Response) *string {
 	return nil
 }
 
-func buildContent(resp *http.Response) (*harfile.Content, error) {
+func buildResponseContent(resp *http.Response) (*harfile.Content, error) {
 	buf, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
