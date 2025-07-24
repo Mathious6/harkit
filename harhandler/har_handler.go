@@ -22,41 +22,74 @@ var (
 )
 
 type HARHandler struct {
-	log *harfile.Log
+	har *harfile.HAR
 
 	resolveIPAddress bool
 }
 
-func NewHandler(flowId string, opts ...HandlerOption) *HARHandler {
+func CreateHandler(flowID string, opts ...HandlerOption) (*HARHandler, error) {
 	globalHarStorageMutex.Lock()
 	defer globalHarStorageMutex.Unlock()
-
-	if handler, exists := globalHarStorage[flowId]; exists {
-		for _, opt := range opts {
-			opt(handler)
-		}
-		return handler
+	if _, ok := globalHarStorage[flowID]; ok {
+		return nil, fmt.Errorf("handler %q already exists", flowID)
 	}
-
-	handler := &HARHandler{
-		log: &harfile.Log{
-			Version: "1.2",
-			Creator: &harfile.Creator{
-				Name:    flowId,
-				Version: fmt.Sprintf("harkit-%s", harkit.Version),
-			},
-			Entries: []*harfile.Entry{},
-		},
-	}
-
-	for _, opt := range opts {
-		opt(handler)
-	}
-	globalHarStorage[flowId] = handler
-	return handler
+	handler := newHARHandler(flowID, opts...)
+	globalHarStorage[flowID] = handler
+	return handler, nil
 }
 
-func (h *HARHandler) Build(sentAt time.Time, req *http.Request, resp *http.Response) error {
+func GetHandler(flowID string) (*HARHandler, error) {
+	globalHarStorageMutex.Lock()
+	defer globalHarStorageMutex.Unlock()
+	handler, exists := globalHarStorage[flowID]
+	if !exists {
+		return nil, fmt.Errorf("handler %q not found", flowID)
+	}
+	return handler, nil
+}
+
+func GetOrCreateHandler(flowID string, opts ...HandlerOption) *HARHandler {
+	if h, err := GetHandler(flowID); err == nil {
+		for _, opt := range opts {
+			opt(h)
+		}
+		return h
+	}
+	h, _ := CreateHandler(flowID, opts...)
+	return h
+}
+
+func newHARHandler(flowID string, opts ...HandlerOption) *HARHandler {
+	h := &HARHandler{
+		har: &harfile.HAR{
+			Log: &harfile.Log{
+				Version: "1.2",
+				Creator: &harfile.Creator{
+					Name:    flowID,
+					Version: fmt.Sprintf("harkit-%s", harkit.Version),
+				},
+				Entries: []*harfile.Entry{},
+			},
+		},
+	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
+}
+
+func AddEntry(flowId string, sentAt time.Time, req *http.Request, resp *http.Response) error {
+	handler := GetOrCreateHandler(flowId)
+	return handler.AddEntry(sentAt, req, resp)
+}
+
+func Export(flowId string, filename string) error {
+	handler := GetOrCreateHandler(flowId)
+	delete(globalHarStorage, flowId)
+	return handler.har.Save(filename)
+}
+
+func (h *HARHandler) AddEntry(sentAt time.Time, req *http.Request, resp *http.Response) error {
 	timingsReceive := float64(time.Since(sentAt).Milliseconds())
 
 	clonedReq, err := cloneRequestPreserveBody(req)
@@ -79,7 +112,7 @@ func (h *HARHandler) Build(sentAt time.Time, req *http.Request, resp *http.Respo
 		Receive: timingsReceive,
 	}
 
-	h.log.Entries = append(h.log.Entries, &harfile.Entry{
+	h.har.Log.Entries = append(h.har.Log.Entries, &harfile.Entry{
 		StartedDateTime: sentAt,
 		Time:            timings.Total(),
 		Request:         harReq,
@@ -90,14 +123,6 @@ func (h *HARHandler) Build(sentAt time.Time, req *http.Request, resp *http.Respo
 	})
 
 	return nil
-}
-
-func Export(flowId string, filename string) error {
-	globalHarStorageMutex.Lock()
-	defer globalHarStorageMutex.Unlock()
-
-	har := &harfile.HAR{Log: globalHarStorage[flowId].log}
-	return har.Save(filename)
 }
 
 // resolveServerIPAddress performs a DNS lookup on the given URL and returns the first resolved

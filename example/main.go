@@ -62,7 +62,7 @@ func sendGetRequestWithQueryParams(client httpkit.HttpClient) {
 		panic(err)
 	}
 	defer resp.Body.Close()
-	harhandler.NewHandler(client.GetFlowId()).Build(sentAt, req, resp)
+	harhandler.AddEntry(client.GetFlowId(), sentAt, req, resp)
 
 	fmt.Println("Parameters sent.")
 }
@@ -85,7 +85,7 @@ func sendGetRequestWithSetCookies(client httpkit.HttpClient) {
 		panic(err)
 	}
 	defer resp.Body.Close()
-	harhandler.NewHandler(client.GetFlowId()).Build(sentAt, req, resp)
+	harhandler.AddEntry(client.GetFlowId(), sentAt, req, resp)
 
 	fmt.Println("Cookies set.")
 }
@@ -119,7 +119,7 @@ func sendPostRequestWithForm(client httpkit.HttpClient) {
 		panic(err)
 	}
 	defer resp.Body.Close()
-	harhandler.NewHandler(client.GetFlowId()).Build(sentAt, req, resp)
+	harhandler.AddEntry(client.GetFlowId(), sentAt, req, resp)
 
 	fmt.Println("Form URL-encoded request sent.")
 }
@@ -151,7 +151,7 @@ func sendPostRequestWithJSON(client httpkit.HttpClient) {
 		panic(err)
 	}
 	defer resp.Body.Close()
-	harhandler.NewHandler(client.GetFlowId()).Build(sentAt, req, resp)
+	harhandler.AddEntry(client.GetFlowId(), sentAt, req, resp)
 
 	fmt.Println("JSON request sent.")
 }
