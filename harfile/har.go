@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const HARVersion = "1.2" // HARVersion is the version of the HAR format
+
 // HAR parent container for log.
 type HAR struct {
 	Log *Log `json:"log"` // Log represents the root of exported data.

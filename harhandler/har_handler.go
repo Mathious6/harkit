@@ -17,20 +17,21 @@ import (
 )
 
 var (
-	globalHarStorage      = make(map[string]*HARHandler)
-	globalHarStorageMutex = sync.Mutex{}
+	globalHarStorage      = make(map[string]*HARHandler) // globalHarStorage is storing all the HARHandlers for all the flows
+	globalHarStorageMutex = sync.Mutex{}                 // globalHarStorageMutex is used to synchronize access to the globalHarStorage map
 )
 
+// HARHandler is the main struct that stores the HAR data for a flow
 type HARHandler struct {
-	har *harfile.HAR
-
-	resolveIPAddress bool
+	har              *harfile.HAR // har is the HAR data for the flow
+	resolveIPAddress bool         // resolveIPAddress is a flag to resolve the IP address of the server
 }
 
+// CreateHandler creates a new HARHandler for a flow with the given flowID
 func CreateHandler(flowID string, opts ...HandlerOption) (*HARHandler, error) {
 	globalHarStorageMutex.Lock()
 	defer globalHarStorageMutex.Unlock()
-	if _, ok := globalHarStorage[flowID]; ok {
+	if _, exists := globalHarStorage[flowID]; exists {
 		return nil, fmt.Errorf("handler %q already exists", flowID)
 	}
 	handler := newHARHandler(flowID, opts...)
@@ -38,6 +39,7 @@ func CreateHandler(flowID string, opts ...HandlerOption) (*HARHandler, error) {
 	return handler, nil
 }
 
+// GetHandler gets the HARHandler for a flow with the given flowID
 func GetHandler(flowID string) (*HARHandler, error) {
 	globalHarStorageMutex.Lock()
 	defer globalHarStorageMutex.Unlock()
@@ -48,22 +50,24 @@ func GetHandler(flowID string) (*HARHandler, error) {
 	return handler, nil
 }
 
+// GetOrCreateHandler gets the HARHandler for a flow with the given flowID, if it doesn't exist, it creates a new one
 func GetOrCreateHandler(flowID string, opts ...HandlerOption) *HARHandler {
-	if h, err := GetHandler(flowID); err == nil {
+	if handler, err := GetHandler(flowID); err == nil {
 		for _, opt := range opts {
-			opt(h)
+			opt(handler)
 		}
-		return h
+		return handler
 	}
-	h, _ := CreateHandler(flowID, opts...)
-	return h
+	handler, _ := CreateHandler(flowID, opts...)
+	return handler
 }
 
+// newHARHandler creates a new HARHandler for a flow with the given flowID and applies the given options
 func newHARHandler(flowID string, opts ...HandlerOption) *HARHandler {
 	h := &HARHandler{
 		har: &harfile.HAR{
 			Log: &harfile.Log{
-				Version: "1.2",
+				Version: harfile.HARVersion,
 				Creator: &harfile.Creator{
 					Name:    flowID,
 					Version: fmt.Sprintf("harkit-%s", harkit.Version),
@@ -78,17 +82,18 @@ func newHARHandler(flowID string, opts ...HandlerOption) *HARHandler {
 	return h
 }
 
+// AddEntry adds a new entry to the HARHandler for a flow with the given flowID, sentAt, request, and response
 func AddEntry(flowId string, sentAt time.Time, req *http.Request, resp *http.Response) error {
-	handler := GetOrCreateHandler(flowId)
-	return handler.AddEntry(sentAt, req, resp)
+	return GetOrCreateHandler(flowId).AddEntry(sentAt, req, resp)
 }
 
-func Export(flowId string, filename string) error {
-	handler := GetOrCreateHandler(flowId)
+// Export exports the HAR data for a flow with the given flowID and filename
+func Export(flowId, filename string) error {
 	delete(globalHarStorage, flowId)
-	return handler.har.Save(filename)
+	return GetOrCreateHandler(flowId).har.Save(filename)
 }
 
+// AddEntry adds a new entry to the HARHandler for a flow with the given sentAt, request, and response
 func (h *HARHandler) AddEntry(sentAt time.Time, req *http.Request, resp *http.Response) error {
 	timingsReceive := float64(time.Since(sentAt).Milliseconds())
 
@@ -117,7 +122,7 @@ func (h *HARHandler) AddEntry(sentAt time.Time, req *http.Request, resp *http.Re
 		Time:            timings.Total(),
 		Request:         harReq,
 		Response:        harResp,
-		Cache:           &harfile.Cache{},
+		Cache:           nil,
 		Timings:         timings,
 		ServerIPAddress: resolveServerIPAddress(h.resolveIPAddress, harReq.URL),
 	})
