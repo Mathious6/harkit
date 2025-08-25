@@ -1,10 +1,8 @@
 package harhandler
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"net"
 	"net/url"
 	"sync"
@@ -98,11 +96,7 @@ func Export(flowId, filename string) error {
 func (h *HARHandler) AddEntry(proxy string, sentAt time.Time, req *http.Request, resp *http.Response) error {
 	timingsReceive := float64(time.Since(sentAt).Milliseconds())
 
-	clonedReq, err := cloneRequestPreserveBody(req)
-	if err != nil {
-		return err
-	}
-	harReq, err := converter.FromHTTPRequest(clonedReq)
+	harReq, err := converter.FromHTTPRequest(req)
 	if err != nil {
 		return err
 	}
@@ -149,25 +143,4 @@ func resolveServerIPAddress(resolve bool, rawURL string) string {
 		return ""
 	}
 	return ipAddrs[0].IP.String()
-}
-
-// cloneRequestPreserveBody clones an HTTP request and preserves its body by buffering the content
-// into memory. Both the original and the cloned request will be reset with a fresh body reader,
-// allowing for safe reuse without data loss.
-func cloneRequestPreserveBody(req *http.Request) (*http.Request, error) {
-	if req.Body == nil {
-		return req.Clone(req.Context()), nil
-	}
-
-	buf, err := io.ReadAll(req.Body)
-	if err != nil {
-		return nil, err
-	}
-	defer req.Body.Close()
-	req.Body = io.NopCloser(bytes.NewReader(buf))
-
-	clonedReq := req.Clone(req.Context())
-	clonedReq.Body = io.NopCloser(bytes.NewReader(buf))
-
-	return clonedReq, nil
 }
