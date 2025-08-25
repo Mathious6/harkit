@@ -1,7 +1,6 @@
 package converter
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"net/url"
@@ -15,6 +14,13 @@ const (
 	applicationXWWWFormURLEncoded = "application/x-www-form-urlencoded"
 	multipartFormData             = "multipart/form-data"
 	maxMultipartFormDataSize      = 32 << 20 // 32 MB limit
+
+	methodKey    = ":method"
+	authorityKey = ":authority"
+	schemeKey    = ":scheme"
+	pathKey      = ":path"
+
+	hostKey = "Host"
 )
 
 func FromHTTPRequest(req *http.Request) (*harfile.Request, error) {
@@ -22,7 +28,7 @@ func FromHTTPRequest(req *http.Request) (*harfile.Request, error) {
 		return nil, errors.New("request cannot be nil")
 	}
 
-	reqProto := DefaultRequestHTTPVersion // WARNING: req.Proto is not always accurate
+	reqProto := DefaultRequestHTTPVersion // WARNING: req.Proto is not always accurate so we force it.
 
 	protocolHeader := handleRequestProtocolHeader(reqProto, req.Method, *req.URL)
 	headers := convertHeaders(req.Header, req.ContentLength)
@@ -40,7 +46,7 @@ func FromHTTPRequest(req *http.Request) (*harfile.Request, error) {
 		Headers:     append(protocolHeader, headers...),
 		QueryString: convertRequestQueryParams(req.URL),
 		PostData:    postData,
-		HeadersSize: computeRequestHeadersSize(req, headers),
+		HeadersSize: -1,
 		BodySize:    req.ContentLength,
 	}, nil
 }
@@ -48,14 +54,14 @@ func FromHTTPRequest(req *http.Request) (*harfile.Request, error) {
 func handleRequestProtocolHeader(proto string, method string, url url.URL) []*harfile.NVPair {
 	if proto == "HTTP/2.0" {
 		return []*harfile.NVPair{
-			{Name: ":method", Value: method},
-			{Name: ":authority", Value: url.Host},
-			{Name: ":scheme", Value: url.Scheme},
-			{Name: ":path", Value: url.RequestURI()},
+			{Name: methodKey, Value: method},
+			{Name: authorityKey, Value: url.Host},
+			{Name: schemeKey, Value: url.Scheme},
+			{Name: pathKey, Value: url.RequestURI()},
 		}
 	} else {
 		return []*harfile.NVPair{
-			{Name: "Host", Value: url.Host},
+			{Name: hostKey, Value: url.Host},
 		}
 	}
 }
@@ -77,19 +83,22 @@ func extractRequestPostData(req *http.Request) (*harfile.PostData, error) {
 		return nil, nil
 	}
 
-	buf, err := io.ReadAll(req.Body)
+	body, err := req.GetBody()
 	if err != nil {
 		return nil, err
 	}
-	defer req.Body.Close()
-	req.Body = io.NopCloser(bytes.NewReader(buf))
+	defer body.Close()
+
+	bodyText, err := io.ReadAll(body)
+	if err != nil {
+		return nil, err
+	}
 
 	mimeType := req.Header.Get(ContentTypeKey)
 	postData := &harfile.PostData{MimeType: mimeType}
 
 	if strings.HasPrefix(mimeType, applicationXWWWFormURLEncoded) {
-		text := string(buf)
-		pairs := strings.SplitSeq(text, "&")
+		pairs := strings.SplitSeq(string(bodyText), "&")
 
 		for pair := range pairs {
 			nv := strings.SplitN(pair, "=", 2)
@@ -139,21 +148,6 @@ func extractRequestPostData(req *http.Request) (*harfile.PostData, error) {
 		return postData, nil
 	}
 
-	postData.Text = string(buf)
+	postData.Text = string(bodyText)
 	return postData, nil
-}
-
-func computeRequestHeadersSize(req *http.Request, harHeaders []*harfile.NVPair) int64 {
-	headersSize := 0
-
-	requestLine := req.Method + " " + req.URL.RequestURI() + " " + req.Proto + "\r\n"
-	headersSize += len(requestLine)
-
-	for _, header := range harHeaders {
-		headerLine := header.Name + ": " + header.Value + "\r\n"
-		headersSize += len(headerLine)
-	}
-
-	headersSize += len("\r\n")
-	return int64(headersSize)
 }
