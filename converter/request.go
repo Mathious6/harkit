@@ -24,7 +24,7 @@ func FromHTTPRequest(req *http.Request) (*harfile.Request, error) {
 
 	reqProto := DefaultRequestHTTPVersion // WARNING: req.Proto is not always accurate
 
-	protocolHeader := handleProtocolHeader(reqProto, req.Method, *req.URL)
+	protocolHeader := handleRequestProtocolHeader(reqProto, req.Method, *req.URL)
 	headers := convertHeaders(req.Header, req.ContentLength)
 
 	postData, err := extractRequestPostData(req)
@@ -45,7 +45,7 @@ func FromHTTPRequest(req *http.Request) (*harfile.Request, error) {
 	}, nil
 }
 
-func handleProtocolHeader(proto string, method string, url url.URL) []*harfile.NVPair {
+func handleRequestProtocolHeader(proto string, method string, url url.URL) []*harfile.NVPair {
 	if proto == "HTTP/2.0" {
 		return []*harfile.NVPair{
 			{Name: ":method", Value: method},

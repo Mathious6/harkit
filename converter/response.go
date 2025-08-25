@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"strconv"
 
 	"github.com/Mathious6/harkit/harfile"
 	http "github.com/bogdanfinn/fhttp"
@@ -19,17 +20,30 @@ func FromHTTPResponse(resp *http.Response) (*harfile.Response, error) {
 		return nil, err
 	}
 
+	protocolHeader := handleResponseProtocolHeader(resp.Proto, resp.StatusCode)
+	headers := convertHeaders(resp.Header, resp.ContentLength)
+
 	return &harfile.Response{
 		Status:      int64(resp.StatusCode),
 		StatusText:  http.StatusText(resp.StatusCode),
 		HTTPVersion: resp.Proto,
 		Cookies:     convertCookies(resp.Cookies()),
-		Headers:     convertHeaders(resp.Header, content.Size),
+		Headers:     append(protocolHeader, headers...),
 		Content:     content,
 		RedirectURL: locateRedirectURL(resp),
 		HeadersSize: -1,
 		BodySize:    content.Size,
 	}, nil
+}
+
+func handleResponseProtocolHeader(proto string, status int) []*harfile.NVPair {
+	if proto == "HTTP/2.0" {
+		return []*harfile.NVPair{
+			{Name: ":status", Value: strconv.Itoa(status)},
+		}
+	} else {
+		return []*harfile.NVPair{}
+	}
 }
 
 func locateRedirectURL(resp *http.Response) *string {
