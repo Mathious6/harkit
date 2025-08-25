@@ -10,11 +10,12 @@ import (
 )
 
 const (
-	ContentLengthKey = "Content-Length"
-	ContentTypeKey   = "Content-Type"
-	CookieKey        = "Cookie"
-	SetCookieKey     = "Set-Cookie"
-	LocationKey      = "Location"
+	DefaultRequestHTTPVersion = "HTTP/2.0"
+	ContentLengthKey          = "Content-Length"
+	ContentTypeKey            = "Content-Type"
+	CookieKey                 = "Cookie"
+	SetCookieKey              = "Set-Cookie"
+	LocationKey               = "Location"
 )
 
 func convertCookies(cookies []*http.Cookie) []*harfile.Cookie {

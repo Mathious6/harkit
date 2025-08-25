@@ -32,7 +32,7 @@ func FromHTTPRequest(req *http.Request) (*harfile.Request, error) {
 	return &harfile.Request{
 		Method:      req.Method,
 		URL:         req.URL.String(),
-		HTTPVersion: req.Proto,
+		HTTPVersion: DefaultRequestHTTPVersion, // WARNING: req.Proto is not always accurate
 		Cookies:     convertCookies(req.Cookies()),
 		Headers:     headers,
 		QueryString: convertRequestQueryParams(req.URL),
