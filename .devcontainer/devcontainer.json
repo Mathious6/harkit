@@ -1,6 +1,6 @@
 {
     "name": "Go",
-    "image": "mcr.microsoft.com/devcontainers/go:1.24",
+    "image": "mcr.microsoft.com/devcontainers/go:1.24", // Switch to 1.25 when it's released
     "remoteUser": "vscode",
     "shutdownAction": "stopContainer",
     "initializeCommand": "./.devcontainer/initialize.sh",
