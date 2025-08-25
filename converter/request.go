@@ -22,6 +22,9 @@ func FromHTTPRequest(req *http.Request) (*harfile.Request, error) {
 		return nil, errors.New("request cannot be nil")
 	}
 
+	reqProto := DefaultRequestHTTPVersion // WARNING: req.Proto is not always accurate
+
+	protocolHeader := handleProtocolHeader(reqProto, req.Method, *req.URL)
 	headers := convertHeaders(req.Header, req.ContentLength)
 
 	postData, err := extractRequestPostData(req)
@@ -32,14 +35,29 @@ func FromHTTPRequest(req *http.Request) (*harfile.Request, error) {
 	return &harfile.Request{
 		Method:      req.Method,
 		URL:         req.URL.String(),
-		HTTPVersion: DefaultRequestHTTPVersion, // WARNING: req.Proto is not always accurate
+		HTTPVersion: reqProto,
 		Cookies:     convertCookies(req.Cookies()),
-		Headers:     headers,
+		Headers:     append(protocolHeader, headers...),
 		QueryString: convertRequestQueryParams(req.URL),
 		PostData:    postData,
 		HeadersSize: computeRequestHeadersSize(req, headers),
 		BodySize:    req.ContentLength,
 	}, nil
+}
+
+func handleProtocolHeader(proto string, method string, url url.URL) []*harfile.NVPair {
+	if proto == "HTTP/2.0" {
+		return []*harfile.NVPair{
+			{Name: ":method", Value: method},
+			{Name: ":authority", Value: url.Host},
+			{Name: ":scheme", Value: url.Scheme},
+			{Name: ":path", Value: url.RequestURI()},
+		}
+	} else {
+		return []*harfile.NVPair{
+			{Name: "Host", Value: url.Host},
+		}
+	}
 }
 
 func convertRequestQueryParams(u *url.URL) []*harfile.NVPair {

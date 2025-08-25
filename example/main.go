@@ -47,12 +47,10 @@ func main() {
 func sendGetRequestWithQueryParams(client httpkit.HttpClient) {
 	req, _ := http.NewRequest(http.MethodGet, URL+"/get?name=pierre&role=developer", nil)
 	req.Header.Add("Accept", "*/*")
-	req.Header.Add("Host", "httpbin.org")
 	req.Header.Add("User-Agent", "harkit-example")
 	req.Header.Add("Accept-Encoding", "gzip, deflate, br")
 
 	req.Header.Add(http.HeaderOrderKey, "accept")
-	req.Header.Add(http.HeaderOrderKey, "host")
 	req.Header.Add(http.HeaderOrderKey, "user-agent")
 	req.Header.Add(http.HeaderOrderKey, "accept-encoding")
 
@@ -70,12 +68,10 @@ func sendGetRequestWithQueryParams(client httpkit.HttpClient) {
 func sendGetRequestWithSetCookies(client httpkit.HttpClient) {
 	req, _ := http.NewRequest(http.MethodGet, URL+"/cookies/set?name=pierre&role=developer", nil)
 	req.Header.Add("Accept", "*/*")
-	req.Header.Add("Host", "httpbin.org")
 	req.Header.Add("User-Agent", "harkit-example")
 	req.Header.Add("Accept-Encoding", "gzip, deflate, br")
 
 	req.Header.Add(http.HeaderOrderKey, "accept")
-	req.Header.Add(http.HeaderOrderKey, "host")
 	req.Header.Add(http.HeaderOrderKey, "user-agent")
 	req.Header.Add(http.HeaderOrderKey, "accept-encoding")
 
@@ -99,7 +95,6 @@ func sendPostRequestWithForm(client httpkit.HttpClient) {
 	req, _ := http.NewRequest(http.MethodPost, URL+"/post", body)
 	req.Header.Add("Accept", "*/*")
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Host", "httpbin.org")
 	req.Header.Add("User-Agent", "harkit-example")
 	req.Header.Add("Accept-Encoding", "gzip, deflate, br")
 
@@ -109,7 +104,6 @@ func sendPostRequestWithForm(client httpkit.HttpClient) {
 	req.Header.Add(http.HeaderOrderKey, "content-length")
 	req.Header.Add(http.HeaderOrderKey, "content-type")
 	req.Header.Add(http.HeaderOrderKey, "cookie")
-	req.Header.Add(http.HeaderOrderKey, "host")
 	req.Header.Add(http.HeaderOrderKey, "user-agent")
 	req.Header.Add(http.HeaderOrderKey, "accept-encoding")
 
@@ -131,7 +125,6 @@ func sendPostRequestWithJSON(client httpkit.HttpClient) {
 	req, _ := http.NewRequest(http.MethodPost, URL+"/post", body)
 	req.Header.Add("Accept", "*/*")
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Host", "httpbin.org")
 	req.Header.Add("User-Agent", "harkit-example")
 	req.Header.Add("Accept-Encoding", "gzip, deflate, br")
 
@@ -141,7 +134,6 @@ func sendPostRequestWithJSON(client httpkit.HttpClient) {
 	req.Header.Add(http.HeaderOrderKey, "content-length")
 	req.Header.Add(http.HeaderOrderKey, "content-type")
 	req.Header.Add(http.HeaderOrderKey, "cookie")
-	req.Header.Add(http.HeaderOrderKey, "host")
 	req.Header.Add(http.HeaderOrderKey, "user-agent")
 	req.Header.Add(http.HeaderOrderKey, "accept-encoding")
 
