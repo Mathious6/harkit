@@ -83,8 +83,8 @@ func newHARHandler(flowID string, opts ...HandlerOption) *HARHandler {
 }
 
 // AddEntry adds a new entry to the HARHandler for a flow with the given flowID, sentAt, request, and response
-func AddEntry(flowId string, sentAt time.Time, req *http.Request, resp *http.Response) error {
-	return GetOrCreateHandler(flowId).AddEntry(sentAt, req, resp)
+func AddEntry(flowId string, proxy string, sentAt time.Time, req *http.Request, resp *http.Response) error {
+	return GetOrCreateHandler(flowId).AddEntry(proxy, sentAt, req, resp)
 }
 
 // Export exports the HAR data for a flow with the given flowID and filename
@@ -95,7 +95,7 @@ func Export(flowId, filename string) error {
 }
 
 // AddEntry adds a new entry to the HARHandler for a flow with the given sentAt, request, and response
-func (h *HARHandler) AddEntry(sentAt time.Time, req *http.Request, resp *http.Response) error {
+func (h *HARHandler) AddEntry(proxy string, sentAt time.Time, req *http.Request, resp *http.Response) error {
 	timingsReceive := float64(time.Since(sentAt).Milliseconds())
 
 	clonedReq, err := cloneRequestPreserveBody(req)
@@ -125,6 +125,7 @@ func (h *HARHandler) AddEntry(sentAt time.Time, req *http.Request, resp *http.Re
 		Response:        harResp,
 		Cache:           nil,
 		Timings:         timings,
+		ClientProxy:     proxy,
 		ServerIPAddress: resolveServerIPAddress(h.resolveIPAddress, harReq.URL),
 	})
 
@@ -135,7 +136,7 @@ func (h *HARHandler) AddEntry(sentAt time.Time, req *http.Request, resp *http.Re
 // IP address as a string. Returns an empty string on failure. This is a blocking operation.
 func resolveServerIPAddress(resolve bool, rawURL string) string {
 	if !resolve {
-		return ""
+		return "0.0.0.0"
 	}
 
 	parsedURL, err := url.Parse(rawURL)

@@ -79,6 +79,7 @@ type Entry struct {
 	Response        *Response `json:"response"`                  // Detailed info about the response.
 	Cache           *Cache    `json:"cache"`                     // Info about cache usage.
 	Timings         *Timings  `json:"timings"`                   // Detailed timing info about request/response round trip.
+	ClientProxy     string    `json:"clientProxy,omitempty"`     // NEW: Proxy used by the client to connect to the server.
 	ServerIPAddress string    `json:"serverIPAddress,omitempty"` // IP address of the server that was connected (result of DNS resolution).
 	Connection      string    `json:"connection,omitempty"`      // Unique ID of the parent TCP/IP connection, can be the client or server port number. Note that a port number doesn't have to be unique identifier in cases where the port is shared for more connections. If the port isn't available for the application, any other unique connection ID can be used instead (e.g. connection index). Leave out this field if the application doesn't support this info.
 	Comment         string    `json:"comment,omitempty"`         // A comment provided by the user or the application.
