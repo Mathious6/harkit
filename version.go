@@ -1,3 +1,3 @@
 package harkit
 
-var Version = "v0.2.0"
+var Version = "v1.0.0"
