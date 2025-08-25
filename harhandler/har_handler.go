@@ -89,8 +89,9 @@ func AddEntry(flowId string, sentAt time.Time, req *http.Request, resp *http.Res
 
 // Export exports the HAR data for a flow with the given flowID and filename
 func Export(flowId, filename string) error {
+	handler := GetOrCreateHandler(flowId)
 	delete(globalHarStorage, flowId)
-	return GetOrCreateHandler(flowId).har.Save(filename)
+	return handler.har.Save(filename)
 }
 
 // AddEntry adds a new entry to the HARHandler for a flow with the given sentAt, request, and response
@@ -118,7 +119,7 @@ func (h *HARHandler) AddEntry(sentAt time.Time, req *http.Request, resp *http.Re
 	}
 
 	h.har.Log.Entries = append(h.har.Log.Entries, &harfile.Entry{
-		StartedDateTime: sentAt,
+		StartedDateTime: harfile.HARTime(sentAt),
 		Time:            timings.Total(),
 		Request:         harReq,
 		Response:        harResp,

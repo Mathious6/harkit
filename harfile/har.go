@@ -9,7 +9,17 @@ import (
 	"time"
 )
 
-const HARVersion = "1.2" // HARVersion is the version of the HAR format
+const (
+	HARVersion    = "1.2"                           // HARVersion is the version of the HAR format
+	HARTimeLayout = "2006-01-02T15:04:05.000-07:00" // REF: "Mon Jan 2 15:04:05 MST 2006"
+)
+
+// HARTime is a wrapper around time.Time that formats the time in the HAR format.
+type HARTime time.Time
+
+func (ht HARTime) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + time.Time(ht).Format(HARTimeLayout) + `"`), nil
+}
 
 // HAR parent container for log.
 type HAR struct {
@@ -42,7 +52,7 @@ type Browser struct {
 
 // Pages represents list of exported pages.
 type Page struct {
-	StartedDateTime time.Time    `json:"startedDateTime"`   // Date and time stamp for the beginning of the page load (ISO 8601 - YYYY-MM-DDThh:mm:ss.sTZD, e.g. 2009-07-24T19:20:30.45+01:00).
+	StartedDateTime HARTime      `json:"startedDateTime"`   // Date and time stamp for the beginning of the page load (ISO 8601 - YYYY-MM-DDThh:mm:ss.sTZD, e.g. 2009-07-24T19:20:30.45+01:00).
 	ID              string       `json:"id"`                // Unique identifier of a page within the [log]. Entries use it to refer the parent page.
 	Title           string       `json:"title"`             // Page title.
 	PageTimings     *PageTimings `json:"pageTimings"`       // Detailed timing info about page load.
@@ -63,7 +73,7 @@ type PageTimings struct {
 // for the import).
 type Entry struct {
 	Pageref         string    `json:"pageref,omitempty"`         // Reference to the parent page. Leave out this field if the application does not support grouping by pages.
-	StartedDateTime time.Time `json:"startedDateTime"`           // Date and time stamp of the request start (ISO 8601 - YYYY-MM-DDThh:mm:ss.sTZD).
+	StartedDateTime HARTime   `json:"startedDateTime"`           // Date and time stamp of the request start (ISO 8601 - YYYY-MM-DDThh:mm:ss.sTZD).
 	Time            float64   `json:"time"`                      // Total elapsed time of the request in milliseconds. This is the sum of all timings available in the timings object (i.e. not including -1 values) .
 	Request         *Request  `json:"request"`                   // Detailed info about the request.
 	Response        *Response `json:"response"`                  // Detailed info about the response.
@@ -191,16 +201,19 @@ func (t *Timings) Total() float64 {
 }
 
 // Save saves the HAR data to a file in JSON format under the specified filename.
+// It uses the json.NewEncoder to encode without escaping HTML.
 func (h *HAR) Save(filename string) error {
-	jsonBytes, err := json.MarshalIndent(h, "", "    ")
+	file, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
-	jsonBytes = append(jsonBytes, '\n')
+	enc := json.NewEncoder(file)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "    ")
 
-	err = os.WriteFile(filename, jsonBytes, 0644)
-	if err != nil {
+	if err := enc.Encode(h); err != nil {
 		return err
 	}
 
