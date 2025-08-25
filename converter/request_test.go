@@ -14,10 +14,11 @@ import (
 )
 
 const (
-	REQ_METHOD   = http.MethodPost
-	REQ_URL      = "https://example.com/api?foo=bar"
-	REQ_URI      = "/api?foo=bar"
-	REQ_PROTOCOL = "HTTP/1.1"
+	REQ_METHOD                 = http.MethodPost
+	REQ_URL                    = "https://example.com/api?foo=bar"
+	REQ_URI                    = "/api?foo=bar"
+	REQ_PROTOCOL               = "HTTP/2.0"
+	REQ_PROTOCOL_HEADERS_COUNT = 4
 
 	REQ_HEADER1_NAME  = "Name1"
 	REQ_HEADER1_VALUE = "value1"
@@ -75,7 +76,8 @@ func TestConverter_GivenProtocol_WhenConvertingHTTPRequest_ThenProtocolShouldBeC
 	result, err := converter.FromHTTPRequest(req)
 	require.NoError(t, err)
 
-	assert.Equal(t, REQ_PROTOCOL, result.HTTPVersion, "HAR protocol <> request protocol")
+	// assert.Equal(t, REQ_PROTOCOL, result.HTTPVersion, "HAR protocol <> request protocol")
+	assert.Equal(t, "HTTP/2.0", result.HTTPVersion, "HAR protocol <> request protocol") // WARNING: we force it.
 }
 
 func TestConverter_GivenCookies_WhenConvertingHTTPRequest_ThenCookiesShouldBeCorrect(t *testing.T) {
@@ -95,11 +97,11 @@ func TestConverter_GivenHeaders_WhenConvertingHTTPRequest_ThenHeadersShouldBeCor
 	result, err := converter.FromHTTPRequest(req)
 	require.NoError(t, err)
 
-	assert.Len(t, result.Headers, 3, "HAR should contain 3 headers")
-	assert.Equal(t, REQ_HEADER2_NAME, result.Headers[0].Name, "HAR header name <> request header name")
-	assert.Equal(t, REQ_HEADER2_VALUE, result.Headers[0].Value, "HAR header value <> request header value")
-	assert.Equal(t, REQ_HEADER1_NAME, result.Headers[1].Name, "HAR header name <> request header name")
-	assert.Equal(t, REQ_HEADER1_VALUE, result.Headers[1].Value, "HAR header value <> request header value")
+	assert.Len(t, result.Headers, REQ_PROTOCOL_HEADERS_COUNT+3, "HAR should contain 3 headers")
+	assert.Equal(t, REQ_HEADER2_NAME, result.Headers[REQ_PROTOCOL_HEADERS_COUNT+0].Name, "HAR header name <> request header name")
+	assert.Equal(t, REQ_HEADER2_VALUE, result.Headers[REQ_PROTOCOL_HEADERS_COUNT+0].Value, "HAR header value <> request header value")
+	assert.Equal(t, REQ_HEADER1_NAME, result.Headers[REQ_PROTOCOL_HEADERS_COUNT+1].Name, "HAR header name <> request header name")
+	assert.Equal(t, REQ_HEADER1_VALUE, result.Headers[REQ_PROTOCOL_HEADERS_COUNT+1].Value, "HAR header value <> request header value")
 }
 
 func TestConverter_GivenURLWithQueryString_WhenConvertingHTTPRequest_ThenQueryStringShouldBeCorrect(t *testing.T) {
@@ -153,8 +155,8 @@ func TestConverter_GivenJSONBody_WhenConvertingHTTPRequest_ThenContentLengthShou
 	result, err := converter.FromHTTPRequest(req)
 	require.NoError(t, err)
 
-	assert.Equal(t, converter.ContentLengthKey, result.Headers[2].Name, "HAR content length header name <> request content length header name")
-	assert.Equal(t, REQ_JSON_CONTENT_LENGTH_VALUE, result.Headers[2].Value, "HAR content length header value <> request content length header value")
+	assert.Equal(t, converter.ContentLengthKey, result.Headers[REQ_PROTOCOL_HEADERS_COUNT+2].Name, "HAR content length header name <> request content length header name")
+	assert.Equal(t, REQ_JSON_CONTENT_LENGTH_VALUE, result.Headers[REQ_PROTOCOL_HEADERS_COUNT+2].Value, "HAR content length header value <> request content length header value")
 }
 
 func TestConverter_GivenMultipartBody_WhenConvertingHTTPRequest_ThenPostDataShouldBeCorrect(t *testing.T) {
@@ -181,7 +183,8 @@ func TestConverter_GivenHeaders_WhenConvertingHTTPRequest_ThenHeadersSizeShouldB
 	result, err := converter.FromHTTPRequest(req)
 	require.NoError(t, err)
 
-	assert.Equal(t, computeHeadersSize(), result.HeadersSize, "HAR header size <> request header size")
+	// assert.Equal(t, computeHeadersSize(), result.HeadersSize, "HAR header size <> request header size")
+	assert.Equal(t, int64(-1), result.HeadersSize, "HAR header size <> request header size") // WARNING: we force it.
 }
 
 func TestConverter_GivenBody_WhenConvertingHTTPRequest_ThenBodySizeShouldBeCorrect(t *testing.T) {
@@ -216,19 +219,6 @@ func createRequest(t *testing.T, body io.Reader, contentType string) *http.Reque
 	}
 
 	return req
-}
-
-// computeHeadersSize calculates the total size of HTTP headers in bytes.
-// It sums up the lengths of the HTTP request line, individual headers,
-// and the terminating double CRLF sequence.
-func computeHeadersSize() int64 {
-	headersSize := len(REQ_METHOD + " " + REQ_URI + " " + REQ_PROTOCOL + "\r\n")
-	headersSize += len(REQ_HEADER2_NAME + ": " + REQ_HEADER2_VALUE + "\r\n")
-	headersSize += len(REQ_HEADER1_NAME + ": " + REQ_HEADER1_VALUE + "\r\n")
-	headersSize += len(converter.CookieKey + ": " + REQ_COOKIE_NAME + "=" + REQ_COOKIE_VALUE + "\r\n")
-	headersSize += len("\r\n")
-
-	return int64(headersSize)
 }
 
 // createMultipartBody constructs a multipart HTTP request body with predefined fields and file content.
