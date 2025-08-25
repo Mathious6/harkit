@@ -1,0 +1,9 @@
+# DEVCONTAINER
+.certs
+
+# DEBUG
+example-harkit
+*.har
+
+# OS
+.DS_Store

@@ -1,9 +1,10 @@
 {
     "name": "Go",
-    "dockerFile": "Dockerfile",
+    "image": "mcr.microsoft.com/devcontainers/go:1.24", // Switch to 1.25 when it's released
     "remoteUser": "vscode",
     "shutdownAction": "stopContainer",
-    "postCreateCommand": "go mod download",
+    "initializeCommand": "./.devcontainer/initialize.sh",
+    "postCreateCommand": "./.devcontainer/post-create.sh",
     "customizations": {
         "vscode": {
             "settings": {
@@ -17,5 +18,12 @@
     },
     "mounts": [
         "source=go-modules,target=/go,type=volume" // Keep go modules in a volume
-    ]
+    ],
+    "features": {
+        "ghcr.io/devcontainers-extra/features/zsh-plugins:0": {
+            "plugins": "git golang zsh-autosuggestions zsh-syntax-highlighting zsh-you-should-use",
+            "omzPlugins": "https://github.com/zsh-users/zsh-autosuggestions https://github.com/zsh-users/zsh-syntax-highlighting https://github.com/MichaelAquilina/zsh-you-should-use",
+            "username": "vscode"
+        }
+    }
 }
